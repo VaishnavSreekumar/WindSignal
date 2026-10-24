@@ -9,15 +9,9 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
   Cell,
   ReferenceLine,
 } from 'recharts';
-import {
-  BarChart2,
-  TrendingUp,
-  Info,
-} from 'lucide-react';
 import { ForecastVsActualResponse, AccuracyMetricsResponse } from '../types/api';
 import { KPICard } from './KPICard';
 
@@ -33,8 +27,9 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
   loading,
 }) => {
   const records = timeSeries?.data || [];
+  const sampleSize = records.length;
 
-  // 1. Calculate Daily Aggregations (Daily MAE, Bias, and Outturn)
+  // 1. Calculate Daily Aggregations (Daily MAE, Signed Bias, and Outturn)
   const dailyTrends = useMemo(() => {
     if (records.length === 0) return [];
 
@@ -70,16 +65,16 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
     if (records.length === 0) return [];
 
     const bins = [
-      { label: '< -3k', min: -Infinity, max: -3000, count: 0, color: '#ec4899' },
-      { label: '-3k to -2k', min: -3000, max: -2000, count: 0, color: '#f43f5e' },
-      { label: '-2k to -1k', min: -2000, max: -1000, count: 0, color: '#fb7185' },
-      { label: '-1k to 0', min: -1000, max: 0, count: 0, color: '#fda4af' },
-      { label: '0 to +1k', min: 0, max: 1000, count: 0, color: '#fde68a' },
-      { label: '+1k to +2k', min: 1000, max: 2000, count: 0, color: '#fcd34d' },
-      { label: '+2k to +3k', min: 2000, max: 3000, count: 0, color: '#fbbf24' },
-      { label: '+3k to +4k', min: 3000, max: 4000, count: 0, color: '#f59e0b' },
-      { label: '+4k to +5k', min: 4000, max: 5000, count: 0, color: '#d97706' },
-      { label: '> +5k', min: 5000, max: Infinity, count: 0, color: '#b45309' },
+      { label: '< -3k MW', min: -Infinity, max: -3000, count: 0, color: '#f43f5e' },
+      { label: '-3k to -2k', min: -3000, max: -2000, count: 0, color: '#fb7185' },
+      { label: '-2k to -1k', min: -2000, max: -1000, count: 0, color: '#fda4af' },
+      { label: '-1k to 0', min: -1000, max: 0, count: 0, color: '#cbd5e1' },
+      { label: '0 to +1k', min: 0, max: 1000, count: 0, color: '#fef08a' },
+      { label: '+1k to +2k', min: 1000, max: 2000, count: 0, color: '#fde047' },
+      { label: '+2k to +3k', min: 2000, max: 3000, count: 0, color: '#facc15' },
+      { label: '+3k to +4k', min: 3000, max: 4000, count: 0, color: '#fbbf24' },
+      { label: '+4k to +5k', min: 4000, max: 5000, count: 0, color: '#f59e0b' },
+      { label: '> +5k MW', min: 5000, max: Infinity, count: 0, color: '#d97706' },
     ];
 
     records.forEach((r) => {
@@ -101,180 +96,257 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
 
   return (
     <div>
-      {/* Accuracy Analytics Overview */}
-      <div className="panel" style={{ padding: '20px', marginBottom: '24px' }}>
-        <div className="panel-header" style={{ margin: 0 }}>
-          <div>
-            <h2 className="panel-title">
-              <BarChart2 size={18} style={{ color: 'var(--color-forecast)' }} />
-              Accuracy Analysis & Statistical Bias Distribution
-            </h2>
-            <p className="panel-subtitle">
-              Granular statistical evaluation of day-ahead wind forecasting performance across January 2026 delivery intervals.
-            </p>
+      {/* 1. Practical Executive Takeaway Briefing */}
+      <section className="briefing-card" aria-label="Accuracy Practical Takeaways">
+        <div className="briefing-header">
+          <span className="briefing-tag">Forecasting Performance Analysis</span>
+          <span className="briefing-window">
+            Evaluated Sample Size: {sampleSize} Hourly Delivery Intervals (N = {sampleSize})
+          </span>
+        </div>
+
+        <h2 className="briefing-headline">
+          Key procurement takeaway: Forecasts ran persistently higher than outturn, with severe positive misses clustered during ramp changes.
+        </h2>
+
+        <p className="briefing-body">
+          Across the evaluated January 2026 delivery window, the day-ahead forecast missed metered wind by an average of{' '}
+          <strong>2,039 MW (18.1% of mean wind)</strong>. Directional bias was overwhelmingly positive (+1,748 MW mean bias),
+          meaning the models regularly expected wind that failed to materialize. In 10% of hours (the P90 tail), errors exceeded{' '}
+          <strong>4,098 MW</strong>.
+        </p>
+
+        <div className="briefing-meta-grid">
+          <div className="meta-item">
+            <span className="meta-label">Typical Error (MAE)</span>
+            <span className="meta-val tabular-nums">
+              {accuracy ? `${accuracy.mae_mw.toLocaleString()} MW` : '—'}
+            </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Directional Bias (Mean Bias)</span>
+            <span className="meta-val tabular-nums" style={{ color: 'var(--color-overforecast)' }}>
+              {accuracy ? `+${accuracy.mean_bias_error_mw.toLocaleString()} MW (Overforecast)` : '—'}
+            </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Peak Overforecast Miss</span>
+            <span className="meta-val tabular-nums" style={{ color: 'var(--color-overforecast)' }}>
+              {accuracy ? `+${accuracy.max_overforecast_mw.toLocaleString()} MW` : '—'}
+            </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Peak Underforecast Miss</span>
+            <span className="meta-val tabular-nums" style={{ color: 'var(--color-underforecast)' }}>
+              {accuracy ? `${accuracy.max_underforecast_mw.toLocaleString()} MW` : '—'}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* KPI Cards Grid */}
-      <div className="kpi-grid">
+        <div className="boundary-note">
+          <strong style={{ color: 'var(--text-primary)' }}>Procurement context: </strong>
+          Overforecasting wind introduces short-position volume risk (the system has less physical wind than anticipated),
+          requiring procurement desks to dispatch thermal generation or absorb imbalance settlement. However, without actual market price
+          or customer demand data, physical MW misses cannot be directly equated to commercial P&amp;L outcomes.
+        </div>
+      </section>
+
+      {/* 2. Headline Accuracy Metrics */}
+      <div className="primary-kpi-grid" style={{ marginBottom: '24px' }}>
         <KPICard
-          title="MEAN ABSOLUTE ERROR"
-          value={accuracy ? accuracy.mae_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle="Average Magnitude Deviation"
-          accent="blue"
-        />
-        <KPICard
-          title="MEAN BIAS ERROR"
+          question="Does the forecast usually overestimate or underestimate wind?"
+          title="Directional Bias (Mean Bias Error)"
           value={accuracy ? (accuracy.mean_bias_error_mw > 0 ? `+${accuracy.mean_bias_error_mw.toLocaleString()}` : accuracy.mean_bias_error_mw.toLocaleString()) : '—'}
           unit="MW"
-          subtitle="Systematic Overforecast Tendency"
+          plainEnglish="Forecasts ran ~1.75 GW higher than actual delivery on average across the month."
+          whyCare="Consistent overforecasting means procurement desks relying purely on wind expectations will tend to buy too little backup energy."
+          methodology="Arithmetic mean of signed differences: (1/N) * Σ(Forecast − Actual). Positive = Overforecast."
           accent="amber"
-          icon={<TrendingUp size={16} style={{ color: 'var(--color-overforecast)' }} />}
+          badge="Directional"
         />
+
         <KPICard
-          title="P90 ABSOLUTE ERROR"
+          question="What is the typical magnitude of the hourly forecast miss?"
+          title="Typical Error Size (Mean Absolute Error)"
+          value={accuracy ? accuracy.mae_mw.toLocaleString() : '—'}
+          unit="MW"
+          plainEnglish={`The forecast differed from actual outturn by an average of ${accuracy ? accuracy.mae_mw.toLocaleString() : '—'} MW per hour (18.1% of mean wind).`}
+          whyCare="Determines the typical buffer required for intraday flexibility and spinning reserves."
+          methodology="Average absolute error without sign cancellation: (1/N) * Σ|Forecast − Actual|."
+          accent="blue"
+          badge="Typical Miss"
+        />
+
+        <KPICard
+          question="How severe are the worst 10% of forecast misses?"
+          title="Tail Risk Level (P90 Absolute Error)"
           value={accuracy ? accuracy.p90_abs_error_mw.toLocaleString() : '—'}
           unit="MW"
-          subtitle="Tail Volatility Exposure"
+          plainEnglish="In 90% of hours, the error was smaller than this. In the remaining 10% of hours, the error was larger."
+          whyCare="Helps risk managers size worst-decile volume exposure for trading limits and collateral buffers."
+          methodology="90th percentile of absolute hourly error distribution via linear interpolation."
           accent="purple"
-        />
-        <KPICard
-          title="MAX OVERFORECAST"
-          value={accuracy ? `+${accuracy.max_overforecast_mw.toLocaleString()}` : '—'}
-          unit="MW"
-          subtitle="Peak Volume Shortfall"
-          accent="amber"
-        />
-        <KPICard
-          title="MAX UNDERFORECAST"
-          value={accuracy ? accuracy.max_underforecast_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle="Peak Volume Spill/Surplus"
-          accent="emerald"
+          badge="P90 Risk Level"
         />
       </div>
 
       {loading ? (
         <div className="panel state-container">
           <div className="state-spinner"></div>
-          <p style={{ color: 'var(--text-muted)' }}>Calculating statistical trends...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Calculating statistical distributions...</p>
         </div>
       ) : (
         <>
-          {/* Daily MAE & Bias Trends */}
+          {/* 3. Daily Error Trends Chart */}
           <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h3 className="panel-title">Daily Forecast Error Trends (MAE & Signed Bias)</h3>
-            <p className="panel-subtitle">
-              Daily average absolute error (blue bars) alongside signed mean bias (amber line). Positive bias indicates daily overforecasting.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <span className="badge badge-eligible">Daily MAE (MW)</span>
-            <span className="badge badge-selected">Signed Bias (MW)</span>
-          </div>
-        </div>
+            <div className="panel-header">
+              <div>
+                <h3 className="panel-title">
+                  Did forecasts consistently overestimate or underestimate wind across the month?
+                </h3>
+                <p className="panel-subtitle">
+                  Daily average error magnitude (blue bars) alongside signed directional bias (amber line).
+                  Notice that bias remained positive on almost every day of the month, peaking during the late January storm transitions.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span className="badge badge-eligible">Daily MAE (Average Miss)</span>
+                <span className="badge badge-selected">Signed Bias (Direction)</span>
+              </div>
+            </div>
 
-        <div className="chart-container">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dailyTrends} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} />
-              <YAxis
-                stroke="#64748b"
-                fontSize={11}
-                tickLine={false}
-                tickFormatter={(val) => `${val} MW`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontFamily: 'var(--font-mono)',
-                }}
-                formatter={(val: any, name: any) => [
-                  `${Number(val).toLocaleString()} MW`,
-                  name === 'mae' ? 'Mean Absolute Error' : name === 'bias' ? 'Signed Mean Bias' : 'Actual Outturn',
-                ]}
-                labelFormatter={(label) => `Delivery Date: 2026-${label}`}
-              />
-              <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '10px', fontSize: '12px' }} />
-              <ReferenceLine y={0} stroke="#64748b" strokeDasharray="3 3" />
-              <Bar dataKey="mae" name="Daily MAE (MW)" fill="#0284c7" radius={[4, 4, 0, 0]} opacity={0.8} />
-              <Line
-                type="monotone"
-                dataKey="bias"
-                name="Daily Mean Bias (MW)"
-                stroke="#f59e0b"
-                strokeWidth={3}
-                dot={{ r: 3, fill: '#f59e0b' }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+            <div className="chart-helper-bar">
+              <div className="error-convention-explainer">
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Daily Evaluation:</span>
+                <span>Bars show average miss size; line shows whether the day was overforecast (+) or underforecast (−).</span>
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                {dailyTrends.length} delivery days evaluated
+              </div>
+            </div>
 
-      {/* Error Distribution Histogram */}
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h3 className="panel-title">Forecast Error Distribution (MW Bins)</h3>
-            <p className="panel-subtitle">
-              Distribution of hourly signed errors (Forecast − Actual). Notice the significant positive skew (+1,748 MW mean), showing day-ahead forecasts consistently exceeded realized generation.
-            </p>
+            <div className="chart-container" style={{ height: '360px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dailyTrends} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                    tickFormatter={(val) => `${(val / 1000).toFixed(0)}k MW`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                    formatter={(val: any, name: any) => {
+                      const num = Number(val);
+                      if (name === 'bias') {
+                        return [
+                          `${num > 0 ? '+' : ''}${num.toLocaleString()} MW (${num > 0 ? 'Overforecast' : 'Underforecast'})`,
+                          'Daily Signed Bias',
+                        ];
+                      }
+                      if (name === 'mae') {
+                        return [`${num.toLocaleString()} MW`, 'Daily Typical Miss (MAE)'];
+                      }
+                      return [`${num.toLocaleString()} MW`, name];
+                    }}
+                    labelFormatter={(label) => `Delivery Date: 2026-${label}`}
+                  />
+                  <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
+                  <Bar
+                    dataKey="mae"
+                    name="Daily MAE (MW)"
+                    fill="#38bdf8"
+                    opacity={0.7}
+                    radius={[2, 2, 0, 0]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="bias"
+                    name="Signed Bias (MW)"
+                    stroke="#f59e0b"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: '#f59e0b' }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <span className="badge badge-selected">83.7% Overforecast Hours</span>
-            <span className="badge badge-eligible">16.3% Underforecast Hours</span>
+
+          {/* 4. Signed Error Distribution Histogram */}
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <h3 className="panel-title">
+                  How large were hourly forecast errors?
+                </h3>
+                <p className="panel-subtitle">
+                  Histogram of signed hourly forecast deviations (Forecast − Actual).
+                  The distribution is heavily right-skewed, demonstrating that the vast majority of hours were overforecast (amber/yellow).
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span className="badge badge-excluded">Negative Error: Underforecast (Rose)</span>
+                <span className="badge badge-selected">Positive Error: Overforecast (Amber)</span>
+              </div>
+            </div>
+
+            <div className="chart-container" style={{ height: '320px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={errorDistribution} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis
+                    dataKey="range"
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke="#64748b"
+                    fontSize={11}
+                    tickLine={false}
+                    tickFormatter={(val) => `${val}h`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                    formatter={(val: any, _name: any, item: any) => {
+                      const d = item.payload;
+                      const type = d.isOverforecast ? 'Overforecast (FC > Act)' : 'Underforecast (FC < Act)';
+                      return [`${val} hours (${d.percentage}% of evaluated hours)`, type];
+                    }}
+                    labelFormatter={(label) => `Error Bucket: ${label}`}
+                  />
+                  <Bar dataKey="hours" radius={[3, 3, 0, 0]}>
+                    {errorDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-
-        <div className="chart-container" style={{ height: '300px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={errorDistribution} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="range" stroke="#64748b" fontSize={11} tickLine={false} />
-              <YAxis
-                stroke="#64748b"
-                fontSize={11}
-                tickLine={false}
-                tickFormatter={(val) => `${val}h`}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontFamily: 'var(--font-mono)',
-                }}
-                formatter={(val: any, _name: any, item: any) => [
-                  `${val} hours (${item.payload.percentage}% of window)`,
-                  item.payload.isOverforecast ? 'Overforecast Range' : 'Underforecast Range',
-                ]}
-              />
-              <Bar dataKey="hours" name="Hourly Occurrences" radius={[4, 4, 0, 0]}>
-                {errorDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="kpi-footer" style={{ marginTop: '12px' }}>
-          <Info size={14} style={{ color: 'var(--color-forecast)' }} />
-          <span>
-            Binned data represents exactly {records.length} evaluated hourly delivery intervals from 2026-01-02 00:00Z through 2026-02-01 23:00Z.
-          </span>
-        </div>
-      </div>
-      </>
+        </>
       )}
     </div>
   );

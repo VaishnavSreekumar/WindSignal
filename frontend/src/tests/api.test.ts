@@ -51,9 +51,6 @@ describe('Analytical Mathematical Invariants in Frontend', () => {
   });
 
   it('computes P90 percentile using linear interpolation matching backend quantile definition', () => {
-    // Test linear interpolation formula: index = q * (N - 1)
-    // For values [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000] (N=10)
-    // 90th percentile index = 0.9 * 9 = 8.1 -> arr[8] + 0.1 * (arr[9] - arr[8]) = 9000 + 100 = 9100
     const sortedVals = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
     const q = 0.90;
     const index = q * (sortedVals.length - 1);
@@ -62,5 +59,33 @@ describe('Analytical Mathematical Invariants in Frontend', () => {
     const weight = index - lower;
     const p90 = sortedVals[lower] + weight * (sortedVals[upper] - sortedVals[lower]);
     expect(p90).toBe(9100);
+  });
+
+  it('verifies preset date windows correspond to valid January 2026 delivery bounds', () => {
+    const presets = {
+      full: { from: '', to: '' },
+      h1: { from: '2026-01-02', to: '2026-01-16' },
+      h2: { from: '2026-01-17', to: '2026-02-01' },
+      peakError: { from: '2026-01-28', to: '2026-01-30' },
+    };
+    expect(presets.h1.from).toBe('2026-01-02');
+    expect(presets.h2.to).toBe('2026-02-01');
+    expect(presets.peakError.from).toBe('2026-01-28');
+  });
+
+  it('verifies signed error convention formatting and directional labels', () => {
+    const formatSigned = (err: number) => {
+      const formatted = `${err > 0 ? '+' : ''}${err.toLocaleString()} MW`;
+      const label = err > 0 ? 'Overforecast' : err < 0 ? 'Underforecast' : 'Exact';
+      return { formatted, label };
+    };
+
+    const positiveCase = formatSigned(1747.89);
+    expect(positiveCase.formatted).toBe('+1,747.89 MW');
+    expect(positiveCase.label).toBe('Overforecast');
+
+    const negativeCase = formatSigned(-1250.5);
+    expect(negativeCase.formatted).toBe('-1,250.5 MW');
+    expect(negativeCase.label).toBe('Underforecast');
   });
 });

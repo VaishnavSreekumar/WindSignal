@@ -1,33 +1,69 @@
 import React from 'react';
 
-interface KPICardProps {
+export interface KPICardProps {
+  question: string;
   title: string;
   value: string | number;
   unit?: string;
-  subtitle?: string;
+  plainEnglish: string;
+  whyCare?: string;
+  methodology?: string;
   accent?: 'blue' | 'amber' | 'emerald' | 'purple';
-  icon?: React.ReactNode;
+  badge?: string;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
+  question,
   title,
   value,
   unit,
-  subtitle,
+  plainEnglish,
+  whyCare,
+  methodology,
   accent = 'blue',
-  icon,
+  badge,
 }) => {
+  const accentClass = 
+    accent === 'amber' ? 'bias-card' :
+    accent === 'blue' ? 'mae-card' : 'p90-card';
+
   return (
-    <div className={`kpi-card accent-${accent}`}>
-      <div className="kpi-header">
-        <span className="kpi-title">{title}</span>
-        {icon && <span style={{ color: 'var(--text-dim)' }}>{icon}</span>}
+    <div className={`primary-kpi-card ${accentClass}`}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <span className="card-question">{question}</span>
+          {badge && <span className="assumption-tag">{badge}</span>}
+        </div>
+        <div className="card-num-row">
+          <span className="card-big-num tabular-nums">{value}</span>
+          {unit && <span className="card-unit">{unit}</span>}
+        </div>
+        <div className="card-plain-interpretation">
+          {plainEnglish}
+        </div>
       </div>
-      <div className="kpi-value-row">
-        <span className="kpi-value">{value}</span>
-        {unit && <span className="kpi-unit">{unit}</span>}
-      </div>
-      {subtitle && <div className="kpi-footer">{subtitle}</div>}
+
+      {(whyCare || methodology) && (
+        <details className="card-disclosure">
+          <summary>Why this matters & methodology ▾</summary>
+          <div className="disclosure-content">
+            {whyCare && (
+              <p style={{ marginBottom: '6px' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>Why care: </strong>
+                {whyCare}
+              </p>
+            )}
+            {methodology && (
+              <div>
+                <span className="technical-tag">{title}</span>
+                <p style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                  {methodology}
+                </p>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
     </div>
   );
 };

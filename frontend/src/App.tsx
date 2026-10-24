@@ -122,10 +122,10 @@ export const App: React.FC = () => {
         padding: '16px 24px',
         textAlign: 'center',
         fontSize: '11px',
-        color: 'var(--text-dim)',
+        color: 'var(--text-muted)',
         fontFamily: 'var(--font-mono)'
       }}>
-        <span>WindSignal Intelligence Engine v1.0 • Elexon BMRS Stream Provenance (FUELHH & WINDFOR) • Zero Look-Ahead Bias Verified</span>
+        <span>WindSignal • GB Day-Ahead Wind Forecasting Evaluation Benchmark • Elexon FUELHH &amp; WINDFOR Streams • Configured 09:20 UTC Cutoff (Analytical Assumption)</span>
       </footer>
     </div>
   );

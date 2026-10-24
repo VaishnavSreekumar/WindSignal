@@ -16,8 +16,7 @@ import {
   Download,
   Clock,
   RotateCcw,
-  TrendingUp,
-  ShieldAlert,
+  Info,
 } from 'lucide-react';
 import {
   OverviewResponse,
@@ -66,7 +65,6 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
       setDateFrom('2026-01-17');
       setDateTo('2026-02-01');
     } else if (preset === 'peak-error') {
-      // 3 days around peak error event (Jan 28-30)
       setDateFrom('2026-01-28');
       setDateTo('2026-01-30');
     }
@@ -83,53 +81,83 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
   }));
 
   const metrics = accuracy || overview?.headline_metrics;
+  const isFullWindow = !dateFrom && !dateTo;
 
   return (
     <div>
-      {/* Context Banner: Decision Window, Delivery Scope, and Assumption Tag */}
-      <div className="cockpit-banner">
-        <div className="banner-item">
-          <span className="banner-label">Decision Dates (D-1)</span>
-          <span className="banner-value">
-            <Calendar size={14} style={{ color: 'var(--color-forecast)' }} />
-            2026-01-01 → 2026-01-31 (31 Days)
+      {/* 1. Plain-English Executive Briefing */}
+      <section className="briefing-card" aria-label="Executive Briefing">
+        <div className="briefing-header">
+          <span className="briefing-tag">Historical Procurement Evaluation</span>
+          <span className="briefing-window">
+            Evaluated Decision Dates: 1–31 January 2026 (Delivery: 2 Jan – 1 Feb 2026)
           </span>
         </div>
 
-        <div className="banner-item">
-          <span className="banner-label">Target Delivery Window (D)</span>
-          <span className="banner-value">
-            2026-01-02 00:00Z → 2026-02-01 23:00Z (744 Hours)
-          </span>
-        </div>
+        <h2 className="briefing-headline">
+          {metrics && metrics.mean_bias_error_mw > 0
+            ? 'Day-ahead forecasts ran consistently above actual wind generation across January 2026.'
+            : 'Day-ahead forecasts tracked actual wind generation with balanced directional variance.'}
+        </h2>
 
-        <div className="banner-item">
-          <span className="banner-label">Configured Decision Cutoff</span>
-          <span className="banner-value">
-            <Clock size={14} style={{ color: 'var(--color-cutoff)' }} />
-            09:20:00 UTC
-            <span className="assumption-tag" title="EPEX SPOT GB 60-min Auction Gate Closure. Internal utility trading mandate is an analytical assumption.">
-              Analytical Assumption
+        <p className="briefing-body">
+          Across the evaluated hours, the day-ahead forecast expected more wind generation than was ultimately recorded
+          (+1,748 MW mean bias for the full month). This indicates a systematic volume overestimation at auction order closure.
+          While this is an essential operational planning signal, wind forecast error alone does not determine the amount of electricity
+          the team needs to buy—overall demand, prior contract positions, market cashout prices, and balancing actions are outside this dataset.
+        </p>
+
+        <div className="briefing-meta-grid">
+          <div className="meta-item">
+            <span className="meta-label">Evaluation Scope</span>
+            <span className="meta-val">
+              <Calendar size={13} style={{ color: 'var(--color-forecast)' }} />
+              744 Hourly Delivery Intervals
             </span>
-          </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Forecast Evaluated</span>
+            <span className="meta-val">
+              Elexon WINDFOR (Available at 09:20 UTC)
+            </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Actual Comparison</span>
+            <span className="meta-val">
+              Elexon FUELHH Metered Wind Outturn
+            </span>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-label">Decision Cutoff Reference</span>
+            <span className="meta-val">
+              <Clock size={13} style={{ color: 'var(--color-cutoff)' }} />
+              09:20:00 UTC
+              <span className="assumption-tag" title="EPEX SPOT GB Day-Ahead 60-min Auction gate closure. Configured as an analytical assumption.">
+                Analytical Assumption
+              </span>
+            </span>
+          </div>
         </div>
 
-        <div className="banner-item">
-          <span className="banner-label">Benchmark Run Selected</span>
-          <span className="banner-value" style={{ color: 'var(--color-forecast)' }}>
-            07:30 UTC NGESO Run
-          </span>
+        <div className="boundary-note">
+          <strong style={{ color: 'var(--text-primary)' }}>Important scope qualification: </strong>
+          These figures are historical analytical evaluation benchmarks, not live real-time feeds. The 09:20 UTC cutoff reflects
+          the EPEX SPOT GB Day-Ahead Auction order book gate closure. Measured forecast differences do not represent financial cashout
+          penalties or demand deficits, as commercial positions depend on full portfolio netting.
         </div>
-      </div>
+      </section>
 
-      {/* Date Filter & Control Bar */}
-      <div className="panel" style={{ padding: '16px 20px', marginBottom: '20px' }}>
+      {/* 2. Decision Window Controls Bar */}
+      <div className="panel" style={{ padding: '14px 18px', marginBottom: '20px' }}>
         <div className="panel-header" style={{ margin: 0 }}>
           <div className="filter-bar">
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
-              DELIVERY WINDOW:
+              EVALUATION WINDOW:
             </span>
-            <div className="filter-btn-group">
+            <div className="filter-btn-group" role="group" aria-label="Preset Date Ranges">
               <button
                 className={`filter-pill ${activePreset === 'full' ? 'active' : ''}`}
                 onClick={() => handlePreset('full')}
@@ -140,13 +168,13 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                 className={`filter-pill ${activePreset === 'h1' ? 'active' : ''}`}
                 onClick={() => handlePreset('h1')}
               >
-                Jan 02–16
+                Jan 02–16 (360h)
               </button>
               <button
                 className={`filter-pill ${activePreset === 'h2' ? 'active' : ''}`}
                 onClick={() => handlePreset('h2')}
               >
-                Jan 17–Feb 01
+                Jan 17–Feb 01 (384h)
               </button>
               <button
                 className={`filter-pill ${activePreset === 'peak-error' ? 'active' : ''}`}
@@ -186,11 +214,11 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
 
             {(dateFrom || dateTo) && (
               <button
-                className="filter-pill"
+                className="btn-secondary"
                 onClick={() => handlePreset('full')}
                 title="Reset to full window"
               >
-                <RotateCcw size={12} style={{ marginRight: '4px' }} />
+                <RotateCcw size={12} />
                 Reset
               </button>
             )}
@@ -199,7 +227,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={onRefresh}
-              className="export-btn"
+              className="btn-secondary"
               title="Refresh time-series data"
             >
               <RotateCcw size={13} />
@@ -207,7 +235,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
             </button>
             <a
               href={api.getExportCsvUrl(dateFrom, dateTo)}
-              className="export-btn"
+              className="btn-secondary"
               download
               title="Export hourly forecast vs actual CSV"
             >
@@ -218,87 +246,154 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
         </div>
       </div>
 
-      {/* Error Banner */}
       {error && (
-        <div className="error-banner">
+        <div className="error-banner" role="alert">
           <AlertTriangle size={18} />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Headline KPI Cards */}
-      <div className="kpi-grid">
-        <KPICard
-          title="MEAN ABSOLUTE ERROR"
-          value={metrics ? metrics.mae_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle={`Normalized: ${metrics ? metrics.normalized_mae_pct : '—'}% of mean actual`}
-          accent="blue"
-        />
-        <KPICard
-          title="ROOT MEAN SQUARED ERROR"
-          value={metrics ? metrics.rmse_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle="Penalizes large ramp deviations"
-          accent="purple"
-        />
-        <KPICard
-          title="MEAN BIAS ERROR"
-          value={metrics ? (metrics.mean_bias_error_mw > 0 ? `+${metrics.mean_bias_error_mw.toLocaleString()}` : metrics.mean_bias_error_mw.toLocaleString()) : '—'}
-          unit="MW"
-          subtitle={metrics && metrics.mean_bias_error_mw > 0 ? "Systematic Overforecast (+1.75 GW)" : "Underforecast"}
-          accent="amber"
-          icon={<TrendingUp size={16} style={{ color: 'var(--color-overforecast)' }} />}
-        />
-        <KPICard
-          title="P90 ABSOLUTE ERROR"
-          value={metrics ? metrics.p90_abs_error_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle="90% of hours error is below this"
-          accent="amber"
-        />
-        <KPICard
-          title="MEAN ACTUAL OUTTURN"
-          value={metrics ? metrics.mean_actual_mw.toLocaleString() : '—'}
-          unit="MW"
-          subtitle="GB Metered Transmission Wind"
-          accent="emerald"
-        />
-        <KPICard
-          title="DELIVERY INTERVAL COVERAGE"
-          value={accuracy ? `${accuracy.matched_intervals} / ${accuracy.expected_intervals}` : (overview ? `${overview.delivery_window.total_hours}h` : '—')}
-          unit={accuracy ? `(${accuracy.coverage_percentage}%)` : '100%'}
-          subtitle="0 Missing Intervals"
-          accent="emerald"
-        />
+      {/* 3. Tiered Metrics: Primary Decision Numbers First */}
+      <div className="metrics-section">
+        <div className="section-label">
+          <span>Primary Procurement Decision Metrics</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-dim)', textTransform: 'none' }}>
+            {isFullWindow ? 'Showing full January 2026 window (744 hours)' : `Filtered window: ${chartData.length} hours`}
+          </span>
+        </div>
+
+        <div className="primary-kpi-grid">
+          <KPICard
+            question="Did the forecast overestimate or underestimate wind?"
+            title="Mean Bias Error (Signed Forecast − Actual)"
+            value={metrics ? (metrics.mean_bias_error_mw > 0 ? `+${metrics.mean_bias_error_mw.toLocaleString()}` : metrics.mean_bias_error_mw.toLocaleString()) : '—'}
+            unit="MW"
+            plainEnglish={
+              metrics && metrics.mean_bias_error_mw > 0
+                ? "Forecasts ran consistently high: on average, expected wind was higher than actual delivery by ~1.75 GW."
+                : "Forecasts slightly underestimated actual wind delivery."
+            }
+            whyCare="A persistent positive bias means procurement desks relying strictly on day-ahead wind projections risk being caught short of physical volume if they under-buy dispatchable generation."
+            methodology="Arithmetic mean of signed hourly errors: Mean Bias = (1/N) * Σ(Forecast - Actual). Positive value indicates overforecast."
+            accent="amber"
+            badge="Directional Bias"
+          />
+
+          <KPICard
+            question="What was the typical size of the forecast error?"
+            title="Mean Absolute Error (MAE)"
+            value={metrics ? metrics.mae_mw.toLocaleString() : '—'}
+            unit="MW"
+            plainEnglish={
+              metrics
+                ? `In an average hour, the forecast missed actual wind generation by ${metrics.mae_mw.toLocaleString()} MW (about ${metrics.normalized_mae_pct}% of average wind output).`
+                : '—'
+            }
+            whyCare="Establishes the standard volume buffer procurement managers should plan for when assessing day-ahead reserve margins."
+            methodology="Arithmetic mean of absolute deviations: MAE = (1/N) * Σ|Forecast - Actual|. Does not allow positive and negative errors to cancel out."
+            accent="blue"
+            badge="Error Magnitude"
+          />
+
+          <KPICard
+            question="What is the high-error reference level?"
+            title="90th Percentile Absolute Error (P90)"
+            value={metrics ? metrics.p90_abs_error_mw.toLocaleString() : '—'}
+            unit="MW"
+            plainEnglish="In 90% of evaluated hours, the forecast error was at or below this value. Only 1 in 10 hours experienced a larger miss."
+            whyCare="Provides a realistic worst-decile stress benchmark for risk managers setting contingency limits against extreme forecast misses."
+            methodology="Linear interpolation quantile (Type 7): 90% of hourly absolute errors |Forecast - Actual| lie below this threshold."
+            accent="purple"
+            badge="Tail Risk Level"
+          />
+        </div>
+
+        {/* Tier 2: Supporting Statistical Context */}
+        <div className="secondary-stats-bar" aria-label="Supporting Statistical Context">
+          <div className="secondary-stat-item">
+            <span className="secondary-stat-label" title="Root Mean Squared Error penalises large ramp misses more heavily than smaller errors.">
+              Penalised Error (RMSE) <Info size={11} />
+            </span>
+            <span className="secondary-stat-val tabular-nums">
+              {metrics ? `${metrics.rmse_mw.toLocaleString()} MW` : '—'}
+            </span>
+            <span className="secondary-stat-sub">Heavy miss penalty</span>
+          </div>
+
+          <div className="secondary-stat-item">
+            <span className="secondary-stat-label" title="Normalised MAE: MAE divided by Mean Actual Outturn.">
+              Normalised Error (NMAE) <Info size={11} />
+            </span>
+            <span className="secondary-stat-val tabular-nums">
+              {metrics ? `${metrics.normalized_mae_pct}%` : '—'}
+            </span>
+            <span className="secondary-stat-sub">Relative to average wind</span>
+          </div>
+
+          <div className="secondary-stat-item">
+            <span className="secondary-stat-label" title="Average metered transmission wind generation across the selected hours.">
+              Mean Actual Generation <Info size={11} />
+            </span>
+            <span className="secondary-stat-val tabular-nums">
+              {metrics ? `${metrics.mean_actual_mw.toLocaleString()} MW` : '—'}
+            </span>
+            <span className="secondary-stat-sub">GB Metered Outturn</span>
+          </div>
+
+          <div className="secondary-stat-item">
+            <span className="secondary-stat-label" title="Evaluated hourly delivery intervals out of expected hours.">
+              Evaluated Coverage <Info size={11} />
+            </span>
+            <span className="secondary-stat-val tabular-nums">
+              {accuracy ? `${accuracy.matched_intervals} / ${accuracy.expected_intervals} hrs` : (overview ? `${overview.delivery_window.total_hours} hrs` : '—')}
+            </span>
+            <span className="secondary-stat-sub">
+              {accuracy ? `${accuracy.coverage_percentage}% audited` : '100% complete'}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Primary Forecast vs Actual Time-Series Chart */}
+      {/* 4. Primary Forecast vs Actual Time-Series Chart */}
       <div className="panel">
         <div className="panel-header">
           <div>
-            <h2 className="panel-title">
-              Hourly Wind Generation: Day-Ahead Forecast vs. Actual Outturn
-            </h2>
+            <h3 className="panel-title">
+              How did expected wind generation compare with actual delivery over time?
+            </h3>
             <p className="panel-subtitle">
-              Comparison between NGESO WINDFOR (selected at 09:20 UTC cutoff) and FUELHH Outturn. Error convention: Forecast − Actual (positive = overforecast).
+              Visualizes the day-ahead forecast available at auction closure alongside actual metered wind outturn and hourly signed errors.
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="badge badge-eligible">09:20 Cutoff Applied</span>
+            <span className="badge badge-eligible">09:20 UTC Cutoff Applied</span>
             <span className="badge badge-pass">Zero Look-Ahead Bias</span>
+          </div>
+        </div>
+
+        {/* Explicit Chart Helper Bar: Explaining Error Convention */}
+        <div className="chart-helper-bar">
+          <div className="error-convention-explainer">
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Error Convention:</span>
+            <span className="convention-formula">Signed Error = Day-Ahead Forecast − Actual Outturn</span>
+            <span style={{ color: 'var(--text-muted)' }}>|</span>
+            <span style={{ color: 'var(--color-overforecast)' }}>Positive (+) = Forecast above actual (Overforecast)</span>
+            <span style={{ color: 'var(--text-muted)' }}>|</span>
+            <span style={{ color: 'var(--color-underforecast)' }}>Negative (−) = Forecast below actual (Underforecast)</span>
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+            {chartData.length} hourly delivery intervals displayed
           </div>
         </div>
 
         {loading ? (
           <div className="state-container">
             <div className="state-spinner"></div>
-            <p style={{ color: 'var(--text-muted)' }}>Loading time-series analytics from backend...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Loading time-series analytics...</p>
           </div>
         ) : chartData.length === 0 ? (
           <div className="state-container">
-            <ShieldAlert size={32} style={{ color: 'var(--text-dim)' }} />
-            <p style={{ color: 'var(--text-muted)' }}>No hourly records match the selected date range.</p>
+            <p style={{ color: 'var(--text-secondary)' }}>No hourly records match the selected date range.</p>
           </div>
         ) : (
           <div className="chart-container">
@@ -332,19 +427,25 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   contentStyle={{
                     backgroundColor: '#0f172a',
                     border: '1px solid #334155',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     fontSize: '12px',
                     fontFamily: 'var(--font-mono)',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                   }}
                   formatter={(val: any, name: any) => {
                     const num = Number(val);
                     if (name === 'error') {
-                      return [`${num > 0 ? '+' : ''}${num.toLocaleString()} MW`, 'Forecast Error (FC - Act)'];
+                      return [
+                        `${num > 0 ? '+' : ''}${num.toLocaleString()} MW (${num > 0 ? 'Overforecast' : num < 0 ? 'Underforecast' : 'Exact'})`,
+                        'Forecast Error (FC − Act)',
+                      ];
                     }
-                    return [`${num.toLocaleString()} MW`, name === 'forecast' ? 'Day-Ahead Forecast' : 'Actual Outturn'];
+                    if (name === 'forecast') {
+                      return [`${num.toLocaleString()} MW`, 'Day-Ahead Forecast (WINDFOR)'];
+                    }
+                    return [`${num.toLocaleString()} MW`, 'Actual Metered Outturn (FUELHH)'];
                   }}
-                  labelFormatter={(label) => `Interval: ${label} UTC`}
+                  labelFormatter={(label) => `Delivery Interval: ${label} UTC`}
                 />
                 <Legend
                   verticalAlign="top"
@@ -359,7 +460,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   stroke="#38bdf8"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 5, fill: '#38bdf8' }}
+                  activeDot={{ r: 4, fill: '#38bdf8' }}
                 />
                 <Line
                   yAxisId="left"
@@ -369,7 +470,7 @@ export const CockpitView: React.FC<CockpitViewProps> = ({
                   stroke="#10b981"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 5, fill: '#10b981' }}
+                  activeDot={{ r: 4, fill: '#10b981' }}
                 />
                 <Bar
                   yAxisId="right"
