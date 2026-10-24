@@ -23,13 +23,18 @@ class ApiError extends Error {
   }
 }
 
-function buildUrl(endpoint: string): URL {
-  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+export function buildUrl(endpoint: string, customBaseUrl?: string): URL {
+  const effectiveBase = customBaseUrl !== undefined ? customBaseUrl : API_BASE_URL;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  if (API_BASE_URL) {
-    const cleanBase = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  if (effectiveBase) {
+    const cleanBase = effectiveBase.endsWith('/') ? effectiveBase.slice(0, -1) : effectiveBase;
+    if (cleanBase.startsWith('http://') || cleanBase.startsWith('https://')) {
+      return new URL(`${cleanBase}${cleanEndpoint}`);
+    }
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
     return new URL(`${cleanBase}${cleanEndpoint}`, base);
   }
+  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
   return new URL(cleanEndpoint, base);
 }
 

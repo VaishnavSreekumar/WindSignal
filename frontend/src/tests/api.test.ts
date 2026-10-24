@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { api } from '../services/api';
+import { api, buildUrl } from '../services/api';
 
 describe('Frontend API Client URL Builder', () => {
   it('constructs base CSV export URL correctly without parameters', () => {
@@ -11,6 +11,19 @@ describe('Frontend API Client URL Builder', () => {
     const url = api.getExportCsvUrl('2026-01-05', '2026-01-10');
     expect(url).toContain('delivery_date_from=2026-01-05');
     expect(url).toContain('delivery_date_to=2026-01-10');
+  });
+
+  it('supports production Vercel backend URL without localhost in production', () => {
+    const prodUrl = buildUrl('/api/health', 'https://windsignal-api.vercel.app');
+    expect(prodUrl.toString()).toBe('https://windsignal-api.vercel.app/api/health');
+    expect(prodUrl.origin).toBe('https://windsignal-api.vercel.app');
+    expect(prodUrl.toString()).not.toContain('localhost');
+  });
+
+  it('normalizes production URLs with trailing slashes correctly', () => {
+    const prodUrl = buildUrl('/api/overview', 'https://windsignal-api.vercel.app/');
+    expect(prodUrl.toString()).toBe('https://windsignal-api.vercel.app/api/overview');
+    expect(prodUrl.toString()).not.toContain('//api');
   });
 });
 
