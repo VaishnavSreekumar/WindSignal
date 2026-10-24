@@ -91,27 +91,65 @@ docker run -p 8000:8000 windsignal:latest
 
 ---
 
-## 6. Production Deployment Plan (Vercel / Heroku)
+## 6. Vercel Two-Project Production Deployment Guide
 
-### Backend on Heroku
-1. Configured via the committed `Procfile`:
-   ```text
-   web: uvicorn src.api:app --host 0.0.0.0 --port $PORT
-   ```
-2. Set configuration variable in Heroku dashboard:
-   ```bash
-   heroku config:set CORS_ORIGINS="https://your-frontend.vercel.app,http://localhost:5173"
-   ```
-3. Deploy repository to Heroku via Git or Container Registry.
+Deploying WindSignal on Vercel uses **two separate Vercel projects** connected to the same GitHub repository:
+- **Project 1: Backend API** (FastAPI Python Serverless Runtime at root `.`)
+- **Project 2: Frontend Dashboard** (React + TypeScript + Vite SPA in `frontend/`)
 
-### Frontend on Vercel
-1. Set the root directory in Vercel to `frontend`.
-2. Configure the build command as `npm run build` and output directory as `dist`.
-3. In Vercel Environment Variables, configure:
-   ```text
-   VITE_API_BASE_URL=https://your-backend.herokuapp.com
-   ```
-4. Client-side SPA routing is governed by the committed `frontend/vercel.json`.
+```
+GitHub Repository: VaishnavSreekumar/WindSignal
+   │
+   ├── Project 1 (Root: .) ───────► Vercel Python Serverless ──► https://windsignal-api.vercel.app
+   │                                  ├── pyproject.toml [tool.vercel] entrypoint = "src.api:app"
+   │                                  ├── vercel.json (bundles data/**, rewrites to /src/api.py)
+   │                                  └── All 7 /api/* endpoints + /docs
+   │
+   └── Project 2 (Root: frontend) ► Vercel Vite Frontend ─────► https://windsignal.vercel.app
+                                      ├── frontend/vercel.json (SPA catch-all to index.html)
+                                      └── VITE_API_BASE_URL = https://windsignal-api.vercel.app
+```
+
+---
+
+### Step 1: Deploy the Backend API (`windsignal-api`)
+
+1. In the [Vercel Dashboard](https://vercel.com/new), select **Add New Project** and import `VaishnavSreekumar/WindSignal`.
+2. Configure Project Settings:
+   - **Project Name:** `windsignal-api` (or your preferred name)
+   - **Root Directory:** `./` (repository root)
+   - **Framework Preset:** `Other`
+   - **Build Command:** *(leave empty)*
+   - **Output Directory:** *(leave empty)*
+3. Environment Variables:
+   - `CORS_ORIGINS`: `https://your-frontend.vercel.app,http://localhost:5173` *(Optional: when running on Vercel, requests from any `https://*.vercel.app` domain are permitted automatically).*
+4. Click **Deploy**.
+5. Once deployed, verify:
+   - Health check: `https://<your-backend>.vercel.app/api/health`
+   - Overview metrics: `https://<your-backend>.vercel.app/api/overview`
+   - Interactive Swagger docs: `https://<your-backend>.vercel.app/docs`
+
+---
+
+### Step 2: Deploy the Frontend Dashboard (`windsignal`)
+
+1. In the Vercel Dashboard, select **Add New Project** and import the same repository `VaishnavSreekumar/WindSignal`.
+2. Configure Project Settings:
+   - **Project Name:** `windsignal`
+   - **Root Directory:** Click **Edit** and select `frontend`.
+   - **Framework Preset:** `Vite` (automatically detected)
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+3. Environment Variables:
+   - `VITE_API_BASE_URL`: The production URL from Step 1, e.g. `https://<your-backend>.vercel.app` *(without trailing slash)*.
+4. Click **Deploy**.
+5. The frontend will build and serve with client-side SPA routing governed by `frontend/vercel.json`.
+
+---
+
+### Alternative: Heroku & Container Deployment
+- **Heroku:** A compliant `Procfile` (`web: uvicorn src.api:app --host 0.0.0.0 --port $PORT`) is committed for single-dyno Python deployment.
+- **Docker Compose:** Run both locally with `docker compose up --build`.
 
 ---
 
