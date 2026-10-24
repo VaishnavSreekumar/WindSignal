@@ -1,0 +1,60 @@
+{
+  "audit_timestamp_utc": "2026-10-24T07:29:01.176200+00:00",
+  "delivery_window": {
+    "start": "2026-01-02T00:00:00+00:00",
+    "end": "2026-02-01T23:00:00+00:00",
+    "expected_delivery_hours": 744,
+    "covered_delivery_hours": 744,
+    "missing_delivery_hours": 0,
+    "coverage_percentage": 100.0
+  },
+  "raw_ingestion": {
+    "fuelhh": {
+      "dataset": "FUELHH",
+      "endpoint": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH/stream",
+      "url_requested": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH/stream?settlementDateFrom=2026-01-01&settlementDateTo=2026-02-02&fuelType=WIND",
+      "params": {
+        "settlementDateFrom": "2026-01-01",
+        "settlementDateTo": "2026-02-02",
+        "fuelType": "WIND"
+      },
+      "retrieval_timestamp_utc": "2026-10-24T07:19:44.343498+00:00",
+      "elapsed_seconds": 1.661412,
+      "http_status": 200,
+      "record_count": 1584,
+      "content_type": "application/json; charset=utf-8"
+    },
+    "windfor": {
+      "dataset": "WINDFOR",
+      "endpoint": "https://data.elexon.co.uk/bmrs/api/v1/datasets/WINDFOR/stream",
+      "url_requested": "https://data.elexon.co.uk/bmrs/api/v1/datasets/WINDFOR/stream?publishDateTimeFrom=2025-12-30T00%3A00%3A00Z&publishDateTimeTo=2026-01-31T23%3A59%3A59Z",
+      "params": {
+        "publishDateTimeFrom": "2025-12-30T00:00:00Z",
+        "publishDateTimeTo": "2026-01-31T23:59:59Z"
+      },
+      "retrieval_timestamp_utc": "2026-10-24T07:19:46.015185+00:00",
+      "elapsed_seconds": 3.434055,
+      "http_status": 200,
+      "record_count": 19272,
+      "content_type": "application/json; charset=utf-8"
+    }
+  },
+  "validation_invariants": {
+    "look_ahead_violations": 0,
+    "fuelhh_duplicates": 0,
+    "windfor_duplicates": 0,
+    "analytical_dataset_duplicates": 0,
+    "negative_actual_generation_count": 0,
+    "negative_forecast_generation_count": 0,
+    "hourly_aggregation_period_integrity": true
+  },
+  "error_metrics": {
+    "mean_actual_mw": 11283.56,
+    "mae_mw": 2038.91,
+    "rmse_mw": 2504.76,
+    "mean_bias_error_mw": 1747.89,
+    "normalized_mae_pct": 18.07,
+    "max_overforecast_mw": 6870.0,
+    "max_underforecast_mw": -3550.0
+  }
+}
