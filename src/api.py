@@ -60,14 +60,37 @@ cors_origins_env = os.getenv(
     "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
 )
 origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+allow_all = "*" in origins
+
+# Allow Vercel preview and production deployments (.vercel.app) by default
+allow_vercel_regex = os.getenv("CORS_ORIGIN_REGEX", r"^https:\/\/.*\.vercel\.app$")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else origins,
+    allow_origin_regex=None if allow_all else allow_vercel_regex,
+    allow_credentials=not allow_all,
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.get(
+    "/",
+    tags=["System"],
+    summary="API Root and Documentation Index",
+    include_in_schema=False
+)
+def get_root():
+    """Root endpoint providing service identity and navigation links."""
+    return {
+        "service": "WindSignal API",
+        "description": "UK Day-Ahead Wind Generation Forecast Accuracy Analytics Platform",
+        "version": "1.0.0",
+        "docs_url": "/docs",
+        "health_url": "/api/health",
+        "overview_url": "/api/overview"
+    }
 
 
 # -------------------------------------------------------------------------

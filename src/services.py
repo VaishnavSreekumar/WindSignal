@@ -39,6 +39,41 @@ class InvalidFilterError(Exception):
     pass
 
 
+def _resolve_data_path(custom_path: Optional[str], relative_subpath: str) -> Path:
+    """
+    Resolve dataset paths across local development, Docker, and serverless runtimes.
+    Does not assume the current working directory is the repository root.
+    """
+    if custom_path:
+        return Path(custom_path)
+
+    # 1. Explicit environment variable overrides
+    if "WINDSIGNAL_PROJECT_ROOT" in os.environ:
+        cand = Path(os.environ["WINDSIGNAL_PROJECT_ROOT"]) / relative_subpath
+        if cand.exists():
+            return cand
+    if "WINDSIGNAL_DATA_DIR" in os.environ:
+        cand = Path(os.environ["WINDSIGNAL_DATA_DIR"]).parent / relative_subpath
+        if cand.exists():
+            return cand
+
+    # 2. Candidate root directories
+    candidate_roots = [
+        Path(__file__).resolve().parent.parent,  # src/services.py -> project root
+        Path(__file__).resolve().parent,         # src/
+        Path.cwd(),                              # current working directory
+        Path.cwd().parent,                       # parent directory
+    ]
+
+    for root in candidate_roots:
+        cand = root / relative_subpath
+        if cand.exists():
+            return cand
+
+    # Default fallback: relative to this file's parent directory
+    return Path(__file__).resolve().parent.parent / relative_subpath
+
+
 class WindSignalService:
     """
     In-memory analytical service layer loaded at FastAPI startup.
@@ -51,10 +86,9 @@ class WindSignalService:
         audit_json_path: Optional[str] = None,
         windfor_raw_path: Optional[str] = None
     ):
-        project_root = Path(__file__).resolve().parent.parent
-        self.parquet_path = Path(parquet_path) if parquet_path else project_root / "data" / "processed" / "wind_analytical_dataset.parquet"
-        self.audit_json_path = Path(audit_json_path) if audit_json_path else project_root / "data" / "processed" / "data_quality_summary.json"
-        self.windfor_raw_path = Path(windfor_raw_path) if windfor_raw_path else project_root / "data" / "raw" / "windfor_raw.json"
+        self.parquet_path = _resolve_data_path(parquet_path, "data/processed/wind_analytical_dataset.parquet")
+        self.audit_json_path = _resolve_data_path(audit_json_path, "data/processed/data_quality_summary.json")
+        self.windfor_raw_path = _resolve_data_path(windfor_raw_path, "data/raw/windfor_raw.json")
 
         self.df_analytical: pd.DataFrame = pd.DataFrame()
         self.audit_summary: Dict[str, Any] = {}
